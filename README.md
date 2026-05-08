@@ -1,7 +1,7 @@
-# ADAKS - Afet Koordinasyon Merkezi Sistemi
+# ADAKS - Afet ve Deprem Acil Yardım Koordinasyon Sistemi
 
 ## Projenin Amaci
-ADAKS (Afet Koordinasyon Merkezi Sistemi), dogal afetler ve acil durumlar aninda kritik kaynaklarin, lojistik aglarin, gonullu yonetiminin ve arama-kurtarma ekiplerinin en verimli sekilde koordine edilmesini saglamak amaciyla gelistirilmis kapsamli bir masaustu uygulamasidir. Sistem, karmasik kriz anlarinda insan hatasini en aza indirmeyi, sinirli kaynaklari en cok ihtiyac duyulan bolgelere hizlica ulastirmayi ve saha operasyonlarini veriye dayali, analitik bir sekilde yonetmeyi hedefler.
+ADAKS (Afet ve Deprem Acil Yardım Koordinasyon Sistemi), dogal afetler ve acil durumlar aninda kritik kaynaklarin, lojistik aglarin, gonullu yonetiminin ve arama-kurtarma ekiplerinin en verimli sekilde koordine edilmesini saglamak amaciyla gelistirilmis kapsamli bir masaustu uygulamasidir. Sistem, karmasik kriz anlarinda insan hatasini en aza indirmeyi, sinirli kaynaklari en cok ihtiyac duyulan bolgelere hizlica ulastirmayi ve saha operasyonlarini veriye dayali, analitik bir sekilde yonetmeyi hedefler.
 
 ## Nasil Calisir?
 Sistem, arkaplanda calisan gelismis veri yapilari ve algoritmalar sayesinde sahadan gelen ihbarlari toplar, onceliklendirir ve merkez depolar ile enkaz bolgeleri arasindaki en optimal ag baglantilarini kurar. 
