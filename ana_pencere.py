@@ -135,7 +135,7 @@ class AnaPencere(QMainWindow):
 
     def init_ui(self):
         """Ana pencere bileşenlerini ve sekmeleri (TabWidget) oluşturur."""
-        self.setWindowTitle("ADAKS - Kapsamlı Afet Koordinasyon Merkezi")
+        self.setWindowTitle("ADAKS - Afet ve Deprem Acil Yardım Koordinasyon Sistemi")
         self.setGeometry(50, 50, 1300, 850)
         self.setStyleSheet(ModernAcikTema.STIL)
 
