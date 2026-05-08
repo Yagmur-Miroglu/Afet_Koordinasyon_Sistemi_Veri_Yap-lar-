@@ -8,17 +8,24 @@ from veri_yapilari import LogBagliListe, EnvanterBST, Yigin, Kuyruk, SabitDizi, 
 class SistemYoneticisi:
     def __init__(self):
         self._sayac = 1
+        # Graf Veri Yapısı: Şehir haritasını düğüm (nokta) ve kenar (yol) olarak temsil eder.
         self.sehir_grafi = nx.Graph()
+        # Bağlı Liste (Linked List): Müdahale loglarını O(1) maliyetle saklar.
         self.mudahale_gecmisi = LogBagliListe()
+        # Stack Mantığı: Taleplerin son girilen ilk çıkar (LIFO) prensibiyle geri alınmasını sağlar.
         self.islem_gecmisi_talepler = [] # Talepleri geri almak için stack
         
-        # --- ÇOKLU DEPO SİSTEMİ ---
+        # --- ÇOKLU DEPO SİSTEMİ (BST Kullanımı) ---
+        # Her depo, ürünlerini alfabetik sıralı tutan ayrı bir Binary Search Tree (BST) yapısına sahiptir.
         self.depolar = ["Depo 1", "Depo 2", "Depo 3", "Depo 4"]
         self.depo_envanterleri = {depo: EnvanterBST() for depo in self.depolar}
         # -------------------------------
         self.tedarikciler = ["AFAD Lojistik", "Kızılay Merkez", "Yerel Tedarik Zinciri", "Uluslararası Yardım Ağı"]
-        
+
+        # Stack (Yığın): Görev tamamlama işlemlerini geri almak (Undo) için kullanılır.
         self.islem_gecmisi_yigini = Yigin()
+
+        # Kuyruk (Queue): Gönüllüleri uzmanlık alanlarına göre FIFO (İlk Gelen İlk Çıkar) düzeninde tutar.
         self.gonullu_kuyruklari = {
             "Arama-Kurtarma": Kuyruk(),
             "Sağlık/Tıp": Kuyruk(),
@@ -26,12 +33,18 @@ class SistemYoneticisi:
             "Psikososyal Destek": Kuyruk(),
             "Mutfak/Gıda": Kuyruk()
         }
+
+        # Sabit Dizi (Static Array): Bellekte önceden ayrılmış sınırlı yedek araç filosunu temsil eder.
         self.arac_filosu = SabitDizi(5)
-        
-        self.gorev_yonetimi = {} 
-        
-        self.ekip_talepleri_heap = [] 
-        self.arama_trie = GenelTrie() 
+
+        # Hash Table (Dictionary): Görevlere ID üzerinden O(1) sürede erişim sağlar.
+        self.gorev_yonetimi = {}
+
+        # Heap (Priority Queue): Talepleri öncelik derecesine göre otomatik sıralı tutar.
+        self.ekip_talepleri_heap = []
+
+        # Trie (Önek Ağacı): Arama işlemlerinde otomatik tamamlama ve hızlı filtreleme sağlar.
+        self.arama_trie = GenelTrie()
         
         self.tum_ekipler = ["Arama-Kurtarma 1", "Arama-Kurtarma 2", "Paramedik 1", "Paramedik 2", "Lojistik Destek"]
         self.musait_ekipler = set(self.tum_ekipler)
@@ -63,8 +76,7 @@ class SistemYoneticisi:
             "Sağlık ve İlk Yardım", "Hijyen", "Lojistik ve Enerji", 
             "Personel/Gönüllü", "Araç/İş Makinesi", "Diğer Kategori"
         ]
-        
-        
+
         gercekci_ogeler = [
             "Hilti", "Jeneratör", "Termal Kamera", "Enkaz Dinleme Cihazı", "Demir Kesme Makası",
             "Çadır (Kışlık)", "Konteyner", "Uyku Tulumu", "Isıtıcı (Elektrikli)", "Isıtıcı (Tüplü)", "Battaniye", "Mat",
@@ -76,7 +88,7 @@ class SistemYoneticisi:
             "Ekskavatör", "Vinç", "Ambulans", "İtfaiye Arazözü", "Kamyon", "Diğer"
         ]
 
-        # Trie ağacına arama/otomatik tamamlama için listendeki HEPSİNİ ekliyoruz
+        # Arama/Öneri sistemi için tüm veriler Trie yapısına indekslenir.
         for veri in self.tum_ekipler + list(self.musait_araclar) + kategoriler + gercekci_ogeler:
             self.arama_trie.ekle(veri)
 
@@ -106,8 +118,8 @@ class SistemYoneticisi:
             for d in self.depolar:
                 if d != depo_adi:
                     self.depo_envanterleri[d].ekle(Urun(i, ad, kat, 50))
-                    
-      
+
+        # Graf düğümleri (Depolar ve Enkazlar) oluşturulur.
         # 4 Depo ve 7 Enkaz bölgesi 
         enkazlar = [f"Enkaz {i}" for i in range(1, 8)] 
         self.sehir_grafi.add_nodes_from(self.depolar + enkazlar)
@@ -122,7 +134,7 @@ class SistemYoneticisi:
             ("Enkaz 5", "Enkaz 6", 2), ("Enkaz 6", "Enkaz 7", 4), ("Enkaz 7", "Enkaz 1", 10)
         ])
 
-        # Görevlerin Çeşitlendirilmesi
+        # Başlangıç görevleri Hash Table üzerinde ilklendirilir.
         self.gorev_yonetimi = {
             "G01": Gorev("G01", "Arama Kurtarma", "Enkaz 1 incelemesi ve ses dinleme", "Bekliyor", "Arama-Kurtarma", 3),
             "G02": Gorev("G02", "Sağlık Müdahalesi", "Enkaz 2'de yaralılara ilk yardım", "Bekliyor", "Sağlık/Tıp", 2),
@@ -132,7 +144,7 @@ class SistemYoneticisi:
             "G06": Gorev("G06", "Arama Kurtarma", "Enkaz 6 ağır yıkım bölgesi tespiti", "Bekliyor", "Arama-Kurtarma", 4)
         }
 
-        # Gönüllü Havuzunun Doldurulması (20 adet)
+        # Kuyruk yapısına (FIFO) örnek gönüllü verileri eklenir (20 adet).
         import random
         from modeller import Gonullu
         isimler = ["Ahmet Yılmaz", "Ayşe Demir", "Mehmet Kaya", "Fatma Çelik", "Ali Şahin", "Zeynep Öztürk", "Mustafa Arslan", "Elif Yıldız", "Hasan Doğan", "Aylin Koç",
@@ -145,22 +157,26 @@ class SistemYoneticisi:
             if i % 3 == 0: uzm = "Arama-Kurtarma"
             if i % 4 == 0: uzm = "Sağlık/Tıp"
             self.gonullu_siraya_al(Gonullu(f"TC{1000+i}", isim, uzm))
-        
+
+        # Sabit diziye yedek araçlar atanır.
         self.arac_filosu.eleman_ata(0, "Ambulans-Yedek")
         self.arac_filosu.eleman_ata(1, "İtfaiye-Yedek")
 
         self.log_ekle("Sistem başlatıldı. Gerçekçi afet verileri ve çoklu depolar yüklendi.")
 
     def durumlari_guncelle(self):
+        # Birimlerin görev ve dinlenme (Cooldown) süreleri simüle edilir.
         simdi = time.time()
         donenler = []
         for birim, info in list(self.mesgul_birimler.items()):
             if simdi >= info["bitis"]:
                 if info["durum"] == "Görevde":
+                    # Durum geçişi: Görev biter, Cooldown (bekleme) başlar.
                     self.mesgul_birimler[birim] = {"durum": "Cooldown", "bitis": simdi + 10}
                     donenler.append(birim)
                     self.log_ekle(f"DURUM GÜNCELLEME: {birim} görevden döndü, Cooldown (Bakım/Dinlenme) aşamasında.")
                 elif info["durum"] == "Cooldown":
+                    # Dinlenme biter, birim müsait havuzuna geri döner.
                     if "Ambulans" in birim or "İtfaiye" in birim or "Makine" in birim or "Vinç" in birim or "Ekskavatör" in birim:
                         self.musait_araclar.add(birim)
                     else:
@@ -171,6 +187,7 @@ class SistemYoneticisi:
         return donenler
 
     def ekip_talep_ekle(self, ekip_adi, adres, kategori, ihtiyac_adi, miktar, manuel_oncelik=None, kaynak_depo=""):
+        # Öncelik seviyeleri atanarak Heap yapısının sıralama mantığı belirlenir.
         if manuel_oncelik:
             priority = manuel_oncelik
         else:
@@ -188,20 +205,23 @@ class SistemYoneticisi:
             priority = oncelik_haritasi.get(kategori, 5)
 
         t_id = f"TLP-{self._sayac}"
-        
-        # --- HATAYI ÇÖZEN KISIM: AŞAĞIDAKİ İKİ İŞLEM ALT ALTA AYRILDI ---
+
         talep = EkipTalebi(priority, t_id, ekip_adi, adres, kategori, ihtiyac_adi, miktar, "Bekliyor", kaynak_depo)
+        # Priority Queue (Heap): O(log N) maliyetle talebi öncelik sırasına göre ekler.
         heapq.heappush(self.ekip_talepleri_heap, talep)
+        # Geri alma işlemi için talep Stack hafızasına kopyalanır.
         self.islem_gecmisi_talepler.append(talep)
             
         self.log_ekle(f"TALEPLER GÜNCELLENDİ: {ekip_adi} (Öncelik: {priority}) -> {ihtiyac_adi}")
         self._sayac += 1
 
     def talep_geri_al(self):
+        # LIFO prensibi: Stack'ten son talebi çekip Heap'ten temizler.
         if not self.islem_gecmisi_talepler: return False, "Geri alınacak talep yok."
         son_talep = self.islem_gecmisi_talepler.pop()
         if son_talep in self.ekip_talepleri_heap:
             self.ekip_talepleri_heap.remove(son_talep)
+            # Heap invariant (özelliği) bozulduğu için yeniden düzenlenir (O(N)).
             heapq.heapify(self.ekip_talepleri_heap)
             self.log_ekle(f"GERİ ALINDI: {son_talep.talep_id} silindi.")
             return True, "Son talep başarıyla geri alındı."
@@ -209,8 +229,8 @@ class SistemYoneticisi:
 
     def talep_karsila(self, talep_id, secilen_depo=None):
         if not self.ekip_talepleri_heap: return False, "Bekleyen talep yok."
-        
-        # Seçilen talebi heap listesinden bul
+
+        # Seçilen talep Heap listesinde O(N) sürede aranır.
         secilen_talep = None
         for t in self.ekip_talepleri_heap:
             if t.talep_id == talep_id:
@@ -224,12 +244,13 @@ class SistemYoneticisi:
         
         if secilen_talep.kategori in malzeme_kategorileri:
             if not secilen_depo: secilen_depo = "Depo 1"
-            
-            # Stok Kontrolü
+
+            # BST Araması: O(log N) sürede ilgili depodaki ürünün stok kontrolünü yapar.
             dugum = self.depo_envanterleri[secilen_depo]._dugum_bul(self.depo_envanterleri[secilen_depo].kok, secilen_talep.ihtiyac_adi)
             stok_miktari = dugum.urun.miktar if dugum else 0
 
             if stok_miktari < secilen_talep.miktar:
+                # Stok yetersizse dış tedarikçiden veri çekme (Simülasyon).
                 import random
                 tedarikci = random.choice(self.tedarikciler)
                 eksik = secilen_talep.miktar - stok_miktari + 100 # İhtiyaçtan biraz fazla isteyelim
@@ -245,8 +266,8 @@ class SistemYoneticisi:
             self.depo_envanterleri[secilen_depo].miktar_azalt(secilen_talep.ihtiyac_adi, secilen_talep.miktar)
             mesaj = f"{secilen_depo}'dan {secilen_talep.miktar} adet {secilen_talep.ihtiyac_adi} sevk edildi."
             self.log_ekle(f"KARŞILANDI: {secilen_talep.talep_id} ({secilen_talep.ihtiyac_adi})")
-            
-            # Talebi listeden çıkar ve heap'i yeniden düzenle
+
+            # Heap'ten eleman çıkarılır ve yapı korunur.
             self.ekip_talepleri_heap.remove(secilen_talep)
             heapq.heapify(self.ekip_talepleri_heap)
             
@@ -263,7 +284,8 @@ class SistemYoneticisi:
             }
             uzmanlik = eslesme.get(secilen_talep.ihtiyac_adi, "Arama-Kurtarma")
             kuyruk = self.gonullu_kuyruklari.get(uzmanlik)
-            
+
+            # FIFO (İlk Gelen İlk Çıkar): Sıradaki gönüllüler sahaya atanır.
             if kuyruk and kuyruk.boyut() >= secilen_talep.miktar:
                 atananlar = [kuyruk.dequeue() for _ in range(secilen_talep.miktar)]
                 isimler = ", ".join([g.ad_soyad for g in atananlar])
@@ -276,7 +298,7 @@ class SistemYoneticisi:
                 return False, f"Yeterli '{uzmanlik}' gönüllüsü yok! (İstenen: {secilen_talep.miktar})"
 
         else:
-             # Araç talepleri için
+            # Araç atama: Müsait havuzundan çıkarılıp meşgul (Görevde) listesine eklenir.
              if secilen_depo and secilen_depo in self.musait_araclar:
                  self.musait_araclar.remove(secilen_depo)
                  # 15 saniye görev süresi
@@ -292,6 +314,7 @@ class SistemYoneticisi:
              return True, mesaj
 
     def gorev_tamamla(self, gorev_id):
+        # ID üzerinden Hash Table erişimi: O(1).
         if gorev_id in self.gorev_yonetimi:
             gorev = self.gorev_yonetimi[gorev_id]
             if gorev.durum == "Tamamlandı": return False, "Bu görev zaten tamamlandı."
@@ -301,10 +324,12 @@ class SistemYoneticisi:
             kisi_sayisi = gorev.kisi_sayisi
             
             kuyruk = self.gonullu_kuyruklari.get(gereken_uzmanlik)
-            
+
+            # Queue: Görev için gereken kişi sayısı kadar dequeue yapılır.
             if kuyruk and kuyruk.boyut() >= kisi_sayisi:
                 atananlar = [kuyruk.dequeue() for _ in range(kisi_sayisi)]
                 gorev.durum = "Tamamlandı"
+                # Yapılan işlemi Stack'e pushlayarak geri alınabilir (Undo) kılar.
                 self.islem_gecmisi_yigini.push(gorev_id) 
                 isimler = ", ".join([g.ad_soyad for g in atananlar])
                 gorev.atanan_kisiler = isimler
@@ -316,13 +341,15 @@ class SistemYoneticisi:
                 return False, f"Kuyrukta yeterli sayıda '{gereken_uzmanlik}' uzmanlığına sahip gönüllü yok!"
 
     def gorev_geri_al(self):
-        gorev_id = self.islem_gecmisi_yigini.pop() 
+        # Stack (Undo): Son tamamlanan görevin durumunu 'Bekliyor'a geri çeker.
+        gorev_id = self.islem_gecmisi_yigini.pop()
         if gorev_id:
             self.gorev_yonetimi[gorev_id].durum = "Bekliyor"
             self.gorev_yonetimi[gorev_id].atanan_kisiler = ""
             self.log_ekle(f"UNDO: {gorev_id} tekrar beklemede (Gönüllüler geri alınmadı).")
 
     def gonullu_siraya_al(self, gonullu_obj):
+        # Kategoriye göre ilgili kuyruğa O(1) maliyetle ekleme yapar.
         kuyruk = self.gonullu_kuyruklari.get(gonullu_obj.kategori)
         if kuyruk is not None:
             kuyruk.enqueue(gonullu_obj)
@@ -331,6 +358,7 @@ class SistemYoneticisi:
             self.log_ekle(f"Geçersiz gönüllü kategorisi: {gonullu_obj.kategori}")
 
     def gonullu_sahaya_gonder(self, kategori):
+        # Kuyruğun başındaki gönüllüyü çeker (FIFO).
         kuyruk = self.gonullu_kuyruklari.get(kategori)
         if kuyruk and not kuyruk.bos_mu():
             kisi = kuyruk.dequeue()
@@ -340,6 +368,7 @@ class SistemYoneticisi:
 
     def rota_hesapla(self, baslangic, bitis):
         try:
+            # Dijkstra Algoritması: Graf üzerindeki en kısa yolu hesaplar.
             yol = nx.dijkstra_path(self.sehir_grafi, baslangic, bitis, weight='weight')
             mesafe = nx.dijkstra_path_length(self.sehir_grafi, baslangic, bitis, weight='weight')
             self.log_ekle(f"Rota Bulundu: {' -> '.join(yol)}")
@@ -348,6 +377,7 @@ class SistemYoneticisi:
             return None, -1
 
     def log_ekle(self, mesaj: str):
+        # Bağlı Liste (Linked List): Başa ekleme yaparak geçmişi kronolojik tutar (O(1)).
         zaman = datetime.now().strftime("%H:%M:%S")
         self.mudahale_gecmisi.basa_ekle(MudahaleLog(self._sayac, mesaj, zaman))
 
@@ -357,7 +387,7 @@ class SistemYoneticisi:
         for depo in self.depolar:
             urun_var_mi = False
             if kategori in malzeme_kategorileri:
-                # Sadece ilgili ürün istenen miktarda varsa bu depo uygundur (O(logN) BST Arama)
+                # BST Araması (O(log N)): İlgili depoda ürün ve stok miktarını doğrular.
                 dugum = self.depo_envanterleri[depo]._dugum_bul(self.depo_envanterleri[depo].kok, ihtiyac_adi)
                 if dugum and dugum.urun.miktar >= miktar:
                     urun_var_mi = True
@@ -366,17 +396,20 @@ class SistemYoneticisi:
                 
             if urun_var_mi:
                 try:
+                    # Mesafe ölçümü: Dijkstra maliyeti hesaplanır.
                     mesafe = nx.dijkstra_path_length(self.sehir_grafi, depo, enkaz_adi, weight='weight')
                     uygunlar.append((depo, mesafe))
                 except nx.NetworkXNoPath: pass
                 
-        # Mesafeye göre küçükten büyüğe sırala ve döndür
+        # Mevcut uygun depoları mesafeye göre küçükten büyüğe sıralar ve döndürür.
         return sorted(uygunlar, key=lambda x: x[1])
     
     def envantere_yeni_urun_ekle(self, depo_adi, urun_obj):
+        # BST Ekleme: Yeni ürünü ilgili deponun ağacına yerleştirir.
         self.depo_envanterleri[depo_adi].ekle(urun_obj)
         self.log_ekle(f"ENVANTER: {depo_adi} deponuna yeni ürün eklendi: {urun_obj.ad}")
 
     def envanterden_urun_sil(self, depo_adi, urun_adi):
+        # BST Silme: Ürünü ilgili depodan hiyerarşiyi bozmadan temizler.
         self.depo_envanterleri[depo_adi].sil(urun_adi)
         self.log_ekle(f"ENVANTER: {depo_adi} deponundan ürün silindi: {urun_adi}")

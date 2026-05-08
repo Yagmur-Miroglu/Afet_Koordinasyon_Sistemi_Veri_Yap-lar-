@@ -13,6 +13,7 @@ from performans import PerformansAnalizi
 from modeller import Urun, Gonullu   
 
 class ModernAcikTema:
+    """Uygulamanın görsel kimliğini belirleyen CSS (QSS) şablonu."""
     STIL = """
     QMainWindow { background-color: #EBF2FA; } /* Soğuk Açık Mavi (Ice Blue) Arka Plan */
     QWidget { color: #1E293B; font-family: 'Segoe UI', Arial; font-size: 14px; }
@@ -107,8 +108,10 @@ class ModernAcikTema:
 class AnaPencere(QMainWindow):
     def __init__(self):
         super().__init__()
+        # Çekirdek mantık ve veri yapılarını yöneten sınıfın ilklendirilmesi.
         self.yonetici = SistemYoneticisi()
-        
+
+        # Arayüzde kullanılacak kategori ve ürün ağacı verileri.
         self.kategori_sozlugu = {
             "Arama Kurtarma Ekipmanı": ["Hilti", "Jeneratör", "Termal Kamera", "Enkaz Dinleme Cihazı", "Demir Kesme Makası", "Diğer"],
             "Barınma": ["Çadır (Kışlık)", "Konteyner", "Uyku Tulumu", "Isıtıcı (Elektrikli)", "Isıtıcı (Tüplü)", "Battaniye", "Mat", "Diğer"],
@@ -124,12 +127,14 @@ class AnaPencere(QMainWindow):
         self.aktif_ihtiyac_listesi = []
 
         self.init_ui()
-        
+
+        # Görevde olan birimlerin durumunu (Görev/Cooldown) her 2 saniyede bir kontrol eden zamanlayıcı.
         self.timer = QTimer()
         self.timer.timeout.connect(self.donenleri_kontrol_et)
         self.timer.start(2000)
 
     def init_ui(self):
+        """Ana pencere bileşenlerini ve sekmeleri (TabWidget) oluşturur."""
         self.setWindowTitle("ADAKS - Kapsamlı Afet Koordinasyon Merkezi")
         self.setGeometry(50, 50, 1300, 850)
         self.setStyleSheet(ModernAcikTema.STIL)
@@ -144,6 +149,7 @@ class AnaPencere(QMainWindow):
         baslik.setAlignment(Qt.AlignCenter)
         ana_duzen.addWidget(baslik)
 
+        # Sekme yapısının kurulması (Saha, Lojistik, Harita, Görev, Rapor).
         self.sekmeler = QTabWidget()
         ana_duzen.addWidget(self.sekmeler)
 
@@ -154,6 +160,7 @@ class AnaPencere(QMainWindow):
         self.sekme_raporlama_olustur()
 
     def sekme_saha_olustur(self):
+        """Ekiplerin Heap (Öncelikli Kuyruk) tabanlı ihbar girdiği arayüz."""
         sekme = QWidget()
         duzen = QHBoxLayout(sekme)
 
@@ -166,6 +173,7 @@ class AnaPencere(QMainWindow):
         self.ekip_cb.lineEdit().setPlaceholderText("Ekip Seçiniz...")
         self.ekip_cb.addItems(self.yonetici.tum_ekipler)
         self.ekip_cb.setCurrentText("")
+        # Trie tabanlı filtreleme: Kullanıcı yazdıkça otomatik tamamlama yapar.
         self.ekip_cb.editTextChanged.connect(lambda t: self.trie_filtrele(t, self.ekip_cb, self.yonetici.tum_ekipler))
         
         self.kat_cb = QComboBox()
@@ -202,10 +210,12 @@ class AnaPencere(QMainWindow):
         enkaz_listesi = [dugum for dugum in self.yonetici.sehir_grafi.nodes if "Enkaz" in dugum]
         self.talep_adres.addItems(enkaz_listesi)
         self.talep_adres.setCurrentText("")
-        
+
+        # Talebi Heap'e Gönder Butonu
         btn_talep = QPushButton("Talebi Heap'e (Sıraya) Gönder")
         btn_talep.clicked.connect(self.talep_olustur_gui)
 
+        # Geri Al (Undo) Butonu: Stack yapısını tetikler.
         btn_geri_al = QPushButton("Son Talebi Geri Al")
         btn_geri_al.setStyleSheet("background-color: #EF4444; color: white;")
         btn_geri_al.clicked.connect(self.talep_geri_al_gui)
@@ -229,6 +239,8 @@ class AnaPencere(QMainWindow):
         self.loglari_guncelle()
 
     def trie_filtrele(self, metin, combobox, tam_liste):
+        """Arama işlemlerinde Trie veri yapısını kullanarak O(M) sürede öneri getirir."""
+        # Metin kutusu boşsa tüm listeyi geri yükler ve sinyalleri geçici olarak durdurur.
         if not metin:
             combobox.blockSignals(True)
             combobox.clear()
@@ -236,18 +248,22 @@ class AnaPencere(QMainWindow):
             combobox.setCurrentIndex(-1)
             combobox.blockSignals(False)
             return
-            
+
+        # Trie yapısından ön eke göre önerileri çeker.
         oneriler = self.yonetici.arama_trie.oneri_getir(metin)
         gecerli_oneriler = []
+        # Önerilen küçük harf sonuçları orijinal liste verileriyle eşleştirir.
         for oneri in oneriler:
             for orj_veri in tam_liste:
                 if orj_veri.lower() == oneri:
                     if orj_veri not in gecerli_oneriler:
                         gecerli_oneriler.append(orj_veri)
-                        
+
+        # Eğer Trie'den sonuç gelmezse standart 'içinde geçiyor mu' kontrolü (fallback) yapar.
         if not gecerli_oneriler:
             gecerli_oneriler = [item for item in tam_liste if metin.lower() in item.lower()]
 
+        # Filtrelenmiş sonuçları arayüz bileşenine (ComboBox) yansıtır.
         if gecerli_oneriler:
             combobox.blockSignals(True)
             combobox.clear()
@@ -256,9 +272,11 @@ class AnaPencere(QMainWindow):
             combobox.blockSignals(False)
 
     def ihtiyac_seceneklerini_guncelle(self, kategori):
+        """Seçilen kategoriye göre ihtiyaç listesini (ComboBox) dinamik olarak günceller."""
         self.ihtiyac_cb.blockSignals(True)
         self.ihtiyac_cb.clear()
-        
+
+        # Sözlük yapısından kategoriye ait alt öğeleri çeker.
         if kategori in self.kategori_sozlugu:
             self.aktif_ihtiyac_listesi = self.kategori_sozlugu[kategori]
         else:
@@ -267,15 +285,18 @@ class AnaPencere(QMainWindow):
         self.ihtiyac_cb.addItems(self.aktif_ihtiyac_listesi)
         self.ihtiyac_cb.setCurrentIndex(-1)
         self.ihtiyac_cb.blockSignals(False)
+        # Özel durum (Diğer) giriş kutularını kontrol eder.
         self.diger_durumunu_kontrol_et() 
 
     def diger_durumunu_kontrol_et(self, text=""):
+        """'Diğer' seçeneği seçildiğinde manuel giriş kutularını görünür yapar."""
         if not hasattr(self, 'diger_ihtiyac_input') or not hasattr(self, 'diger_oncelik_input'):
             return
 
         kat = self.kat_cb.currentText()
         ihtiyac = self.ihtiyac_cb.currentText()
-        
+
+        # Eğer kategori veya ihtiyaç 'Diğer' ise giriş alanlarını gösterir, aksi halde gizler.
         if kat == "Diğer Kategori" or ihtiyac == "Diğer":
             self.diger_ihtiyac_input.show()
             self.diger_oncelik_input.show()
@@ -284,17 +305,21 @@ class AnaPencere(QMainWindow):
             self.diger_oncelik_input.hide()
 
     def talep_olustur_gui(self):
+        """Arayüzden alınan ihbar verilerini doğrular ve Priority Queue (Heap) yapısına gönderir."""
+        ekip = self.ekip_cb.currentText()
         ekip = self.ekip_cb.currentText()
         kat = self.kat_cb.currentText()
         ihtiyac = self.ihtiyac_cb.currentText()
         adres = self.talep_adres.currentText()
 
+        # Boş alan kontrolü.
         if not ekip or not kat or not ihtiyac or not adres:
             QMessageBox.warning(self, "Hata", "Lütfen tüm seçimleri yapınız!")
             return
         
         oncelik = None
-        
+
+        # Manuel öncelik girişi varsa doğrular.
         if kat == "Diğer Kategori" or ihtiyac == "Diğer":
             ihtiyac = self.diger_ihtiyac_input.text()
             if not ihtiyac:
@@ -307,6 +332,7 @@ class AnaPencere(QMainWindow):
                 QMessageBox.warning(self, "Hata", "Öncelik sırası 1 ile 5 arasında bir sayı olmalıdır!")
                 return
 
+        # Miktar verisinin sayısal kontrolü.
         try:
             miktar = int(self.talep_miktar.text())
             if miktar <= 0: raise ValueError
@@ -314,11 +340,12 @@ class AnaPencere(QMainWindow):
             QMessageBox.warning(self, "Hata", "Geçerli bir miktar girin!")
             return
 
+        # Veriyi çekirdek yönetim sınıfındaki Heap yapısına ekler.
         self.yonetici.ekip_talep_ekle(ekip, adres, kat, ihtiyac, miktar, oncelik, "") 
         QMessageBox.information(self, "Eklendi", "Talep sıraya alındı! Koordinasyon sekmesinden depoyu belirleyip karşılayın.")
-        
+
+        # Form alanlarını temizler ve başlangıç haline getirir.
         self.talep_miktar.clear()
-        
         self.ekip_cb.blockSignals(True)
         self.ekip_cb.clear()
         self.ekip_cb.addItems(self.yonetici.tum_ekipler)
@@ -351,10 +378,12 @@ class AnaPencere(QMainWindow):
             self.diger_ihtiyac_input.clear()
             self.diger_oncelik_input.clear()
 
+        # İlgili diğer tabloları ve grafikleri günceller.
         self.harita_taleplerini_guncelle()
         self.loglari_guncelle()
 
     def talep_geri_al_gui(self):
+        """Stack (Yığın) yapısını kullanarak son girilen talebi iptal eder."""
         basarili, mesaj = self.yonetici.talep_geri_al()
         if basarili:
             QMessageBox.information(self, "Geri Alındı", mesaj)
@@ -364,18 +393,20 @@ class AnaPencere(QMainWindow):
             QMessageBox.warning(self, "Hata", mesaj)
 
     def loglari_guncelle(self):
+        """Bağlı Liste (Linked List) üzerindeki log verilerini arayüz listesine aktarır."""
         self.log_listesi.clear()
         for log in self.yonetici.mudahale_gecmisi.listele():
             self.log_listesi.addItem(f"[{log.zaman_damgasi}] {log.mesaj}")
 
     def sekme_lojistik_olustur(self):
+        """Envanter yönetiminin ve BST yapısının kontrol edildiği lojistik sekmesini kurur."""
         sekme = QWidget()
         ana_yatay = QHBoxLayout(sekme)
 
         # SOL PANEL: Depo Listesi ve Tedarik
         sol_panel = QVBoxLayout()
 
-        # TEDARİK BÖLÜMÜ (SOL ALT, ŞİMDİ YUKARI ÇEKİLDİ)
+        # Tedarik yönetimi alanı (Grup kutusu).
         tedarik_grup = QGroupBox("📦 Ürün Tedarik (AFAD Büyük Tedarikçiler)")
         tedarik_duzen = QVBoxLayout()
         self.secili_urun_lbl = QLabel("Seçili Ürün: -")
@@ -394,9 +425,11 @@ class AnaPencere(QMainWindow):
         sol_panel.addWidget(tedarik_grup)
 
         sol_panel.addWidget(QLabel("🏢 Depolar"))
+        # Depo seçim listesi (ListWidget).
         self.depo_listesi_widget = QListWidget()
         self.depo_listesi_widget.setStyleSheet("font-size: 18px; font-weight: bold;")
         self.depo_listesi_widget.addItems(self.yonetici.depolar)
+        # Seçim değiştiğinde BST tablosunu günceller.
         self.depo_listesi_widget.currentTextChanged.connect(self.lojistik_tablo_guncelle)
         sol_panel.addWidget(self.depo_listesi_widget)
 
@@ -416,6 +449,7 @@ class AnaPencere(QMainWindow):
         
         sag_panel.addLayout(yonetim_duzen)
         sag_panel.addWidget(QLabel("📦 Seçili Depo Envanteri (BST ile Sıralı)"))
+        # Envanter tablosu (BST'den gelen verileri gösterir).
         self.envanter_tablosu = QTableWidget(0, 3)
         self.envanter_tablosu.setHorizontalHeaderLabels(["Ürün", "Kategori", "Miktar"])
         self.envanter_tablosu.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -425,13 +459,16 @@ class AnaPencere(QMainWindow):
 
         ana_yatay.addLayout(sol_panel, 1)
         ana_yatay.addLayout(sag_panel, 2)
+        # Yerleşim düzenini sekme paneline ekler.
         self.sekmeler.addTab(sekme, "Lojistik (BST)")
         self.depo_listesi_widget.setCurrentRow(0)
 
     def lojistik_tablo_guncelle(self, secili_depo=None):
+        """Seçili deponun BST (İkili Arama Ağacı) içeriğini tabloya yansıtır."""
         if not secili_depo:
             secili_depo = self.depo_listesi_widget.currentItem().text() if self.depo_listesi_widget.currentItem() else self.yonetici.depolar[0]
-            
+
+        # BST üzerinde 'In-order' gezinme ile tüm ürünleri alfabetik alır.
         urunler = self.yonetici.depo_envanterleri[secili_depo].tum_urunler()
         self.envanter_tablosu.setRowCount(len(urunler))
         for satir, urun in enumerate(urunler):
@@ -440,16 +477,19 @@ class AnaPencere(QMainWindow):
             self.envanter_tablosu.setItem(satir, 2, QTableWidgetItem(str(urun.miktar)))
 
     def urun_secildi_tedarik_guncelle(self, item):
+        """Tablodan ürün seçildiğinde tedarikçi bilgilerini günceller."""
         satir = item.row()
         ad = self.envanter_tablosu.item(satir, 0).text()
         kat = self.envanter_tablosu.item(satir, 1).text()
         self.secili_urun_lbl.setText(f"Seçili Ürün: {ad}")
         
         self.tedarikci_cb.clear()
+        # Kategoriye göre ilgili tedarikçileri getirir.
         tedarikciler = self.yonetici.tedarikci_verileri.get(kat, ["Yerel Tedarikçi"])
         self.tedarikci_cb.addItems(tedarikciler)
 
     def tedarik_islemi_yap(self):
+        """Seçili ürünü tedarikçiden alıp BST envanterine ekler (Update/Create)."""
         depo = self.depo_listesi_widget.currentItem().text()
         ad = self.secili_urun_lbl.text().replace("Seçili Ürün: ", "")
         if ad == "-": return
@@ -464,6 +504,7 @@ class AnaPencere(QMainWindow):
             QMessageBox.warning(self, "Hata", "Geçerli bir miktar girin.")
 
     def urun_ekle_gui(self):
+        """Yeni bir ürünü BST yapısına ekler (Insert)."""
         depo = self.depo_listesi_widget.currentItem().text()
         ad, kat = self.yeni_urun_ad.text(), self.yeni_urun_kat.currentText()
         try:
@@ -473,6 +514,7 @@ class AnaPencere(QMainWindow):
         except: QMessageBox.warning(self, "Hata", "Girişleri kontrol edin.")
 
     def urun_sil_gui(self):
+        """Seçili ürünü BST yapısından siler (Delete)."""
         depo = self.depo_listesi_widget.currentItem().text()
         satir = self.envanter_tablosu.currentRow()
         if satir >= 0:
@@ -481,6 +523,7 @@ class AnaPencere(QMainWindow):
             self.lojistik_tablo_guncelle(depo)
 
     def sekme_harita_olustur(self):
+        """Graf ve Dijkstra algoritmasının görselleştirildiği harita sekmesini kurar."""
         sekme = QWidget()
         duzen = QHBoxLayout(sekme)
         
@@ -489,6 +532,7 @@ class AnaPencere(QMainWindow):
         
         self.baslangic_cb = QComboBox()
         self.bitis_cb = QComboBox()
+        # Rota hesaplama başlangıç ve bitiş düğümlerini (Nodes) listeler.
         dugumler = list(self.yonetici.sehir_grafi.nodes)
         self.baslangic_cb.addItems(dugumler)
         self.bitis_cb.addItems(dugumler)
@@ -511,7 +555,9 @@ class AnaPencere(QMainWindow):
         self.fig = Figure(figsize=(8, 8), dpi=100)
         self.fig.patch.set_facecolor('#EBF2FA')
         self.canvas = FigureCanvas(self.fig)
+        # Harita çizimi için Matplotlib kanvası ilklendirilir.
         self.ax = self.fig.add_subplot(111)
+        # Harita üzerindeki düğümlere (Enkaz/Depo) tıklama özelliği ekler.
         self.canvas.mpl_connect('pick_event', self.haritada_dugum_secildi)
 
         # SAĞ PANEL
@@ -522,6 +568,7 @@ class AnaPencere(QMainWindow):
         sag_panel.addWidget(self.durum_lbl)
         
         sag_panel.addWidget(QLabel("🚩 İhtiyaç Listesi (Heap)"))
+        # Bekleyen taleplerin Heap üzerinden gösterildiği tablo.
         self.heap_tablosu = QTableWidget(0, 6) 
         self.heap_tablosu.setHorizontalHeaderLabels(["ID", "Öncelik", "Ekip", "İhtiyaç", "Miktar", "Adres"])
         self.heap_tablosu.hideColumn(0) 
@@ -548,6 +595,8 @@ class AnaPencere(QMainWindow):
         self.harita_taleplerini_guncelle()
 
     def harita_taleplerini_guncelle(self):
+        """Heap (Öncelikli Kuyruk) yapısındaki bekleyen talepleri arayüz tablosuna yansıtır."""
+        # Heap'teki verileri önceliğe göre sıralı alır.
         talepler = sorted(self.yonetici.ekip_talepleri_heap)
         self.heap_tablosu.setRowCount(len(talepler))
         for i, t in enumerate(talepler):
@@ -573,11 +622,13 @@ class AnaPencere(QMainWindow):
             f"<span style='color: #EF4444; font-weight: bold;'>🔴 Görevde Olan Araçlar: {len(gorevdekiler)}</span>"
             f"</div>"
         )
+        # Müsait olan araçların istatistiklerini günceller.
         self.durum_lbl.setText(detayli_arac_metni)
 
         self.harita_depo_cb.clear() 
 
     def harita_tablo_secimi(self, item):
+        """Tablodan talep seçildiğinde en uygun depoyu veya birimi otomatik önerir."""
         satir = item.row()
         talep_id = self.heap_tablosu.item(satir, 0).text()
         
@@ -585,6 +636,7 @@ class AnaPencere(QMainWindow):
         
         self.harita_depo_cb.clear()
         if secilen_talep:
+            # Malzeme talebi ise en yakın ve stoklu depoyu Dijkstra ile bulur.
             if secilen_talep.kategori in ["Arama Kurtarma Ekipmanı", "Barınma", "Gıda ve Su", "Sağlık ve İlk Yardım", "Hijyen", "Lojistik ve Enerji", "Malzeme"]:
                 uygunlar = self.yonetici.uygun_depolari_bul(secilen_talep.adres, secilen_talep.kategori, secilen_talep.ihtiyac_adi, secilen_talep.miktar)
                 for depo, mesafe in uygunlar:
@@ -596,6 +648,7 @@ class AnaPencere(QMainWindow):
                             self.harita_depo_cb.addItem(f"{depo} (Stok Yok! Acil Tedarik Edilecek, Mesafe: {mesafe})", depo)
                         except nx.NetworkXNoPath: pass
             else:
+                # Personel veya araç ise uygun kuyrukları (Queue) kontrol eder.
                 musait_birim_var_mi = False
                 if secilen_talep.kategori == "Personel/Gönüllü":
                     self.harita_depo_cb.addItem(f"Gönüllü Kuyruğundan Gönder ({secilen_talep.miktar} Kişi)", "Gönüllü Kuyruğu")
@@ -620,50 +673,62 @@ class AnaPencere(QMainWindow):
                      self.harita_depo_cb.addItem("Uygun Birim Bulunamadı / Atama Yapılamıyor", "")
 
     def talep_karsila_gui(self):
+        """Seçili talebi karşılar ve gerekli lojistik sevkiyatı başlatır."""
+        # Kullanıcın Heap tablosundan bir satır seçip seçmediğini kontrol eder.
         satir = self.heap_tablosu.currentRow()
         if satir < 0:
             QMessageBox.warning(self, "Dikkat", "Lütfen tablodan karşılamak istediğiniz talebi seçin.")
             return
 
+        # Seçili satırdaki benzersiz Talep ID'sini alır.
         talep_id = self.heap_tablosu.item(satir, 0).text()
-        
+
+        # İhtiyacın gönderileceği hedef adresi (Enkaz bölgesi) belirler.
         hedef_adres = None
         for t in self.yonetici.ekip_talepleri_heap:
              if t.talep_id == talep_id:
                   hedef_adres = t.adres
                   break
 
+        # ComboBox üzerinden manuel bir depo/birim seçilip seçilmediğini kontrol eder.
         secilen_veri = self.harita_depo_cb.currentData()
 
         # DEPO OTOMATİK SEÇİM MANTIĞI
+        # Eğer manuel seçim yapılmadıysa, algoritma en uygun kaynağı kendi belirler.
         talep = next((t for t in self.yonetici.ekip_talepleri_heap if t.talep_id == talep_id), None)
         if talep and not secilen_veri:
             malzeme_kategorileri = ["Arama Kurtarma Ekipmanı", "Barınma", "Gıda ve Su", "Sağlık ve İlk Yardım", "Hijyen", "Lojistik ve Enerji", "Malzeme"]
             if talep.kategori in malzeme_kategorileri:
+                # Önce hem stoku olan hem de en yakın olan depoyu arar (O(logN) BST + Dijkstra).
                 uygunlar = self.yonetici.uygun_depolari_bul(hedef_adres, talep.kategori, talep.ihtiyac_adi, talep.miktar)
                 if uygunlar:
                     secilen_veri = uygunlar[0][0] # Stoku olan en yakın depo
                 else:
-                    # Stoku yoksa bile mesafeye göre en yakını bul
+                    # Stok hiçbir depoda yoksa, sadece mesafeye bakarak en yakın depoyu (tedarik merkezi) seçer.
                     mesafeler = []
                     for depo in self.yonetici.depolar:
                         try:
+                            # Graf üzerinden ağırlıklı en kısa yol maliyetini hesaplar.
                             m = nx.dijkstra_path_length(self.yonetici.sehir_grafi, depo, hedef_adres, weight='weight')
                             mesafeler.append((depo, m))
                         except: pass
+                    # Mesafeleri küçükten büyüğe sıralar.
                     if mesafeler:
                         mesafeler.sort(key=lambda x: x[1])
                         secilen_veri = mesafeler[0][0]
 
+        # Seçilen depo/birim üzerinden talebi resmen karşılar ve veri yapılarını günceller.
         basarili, mesaj = self.yonetici.talep_karsila(talep_id, secilen_veri)
         if basarili:
             QMessageBox.information(self, "Başarılı", mesaj)
-            
+
+            # Eğer bir depodan sevkiyat yapılıyorsa, rotayı harita üzerinde görselleştirir.
             if secilen_veri and secilen_veri in self.yonetici.depolar:
                 self.baslangic_cb.setCurrentText(secilen_veri)
                 self.bitis_cb.setCurrentText(hedef_adres)
                 self.rota_ciz()
-                
+
+            # Sevkiyat sonrası tüm bağlı veri yapılarını (BST, Heap, Queue) arayüzde tazeler.
             self.lojistik_tablo_guncelle() 
             self.harita_taleplerini_guncelle() 
             self.loglari_guncelle()
@@ -673,22 +738,30 @@ class AnaPencere(QMainWindow):
             QMessageBox.warning(self, "Dikkat", mesaj)
 
     def haritayi_yenile(self, yol=None):
+        """Graf görselleştirme modülünü çağırarak haritayı ve rotayı yeniden çizer."""
+        # RotaGorsellestirici sınıfını kullanarak NetworkX grafını Matplotlib üzerine yansıtır.
         RotaGorsellestirici.harita_ciz(self.yonetici.sehir_grafi, self.ax, yol)
+        # Çizimi PyQt5 kanvası üzerinde günceller.
         self.canvas.draw()
 
     def rota_ciz(self):
+        """Dijkstra algoritması ile en kısa yolu hesaplar ve haritada görselleştirir."""
         bas, bit = self.baslangic_cb.currentText(), self.bitis_cb.currentText()
+        # Graf üzerinde en kısa yolu bulur.
         yol, mesafe = self.yonetici.rota_hesapla(bas, bit)
         if yol:
             self.rota_sonuc_etiketi.setText(f"✅ Rota: {' ➔ '.join(yol)}\nMesafe: {mesafe}")
+            # Haritayı yeni rotaya göre yeniden çizer.
             self.haritayi_yenile(yol)
             self.loglari_guncelle()
 
     def haritada_dugum_secildi(self, event):
+        """Haritadaki bir noktaya tıklandığında o bölgenin detaylarını (taleplerini) gösterir."""
         ind = event.ind[0]
         dugum_adi = list(self.yonetici.sehir_grafi.nodes)[ind]
         
         if "Enkaz" in dugum_adi:
+            # Seçili enkazın Heap'teki bekleyen tüm taleplerini listeler.
             talepler = [t for t in self.yonetici.ekip_talepleri_heap if t.adres == dugum_adi]
             if not talepler:
                 self.enkaz_detay_alani.setText(f"✅ {dugum_adi} için bekleyen talep yok.")
@@ -707,11 +780,13 @@ class AnaPencere(QMainWindow):
             self.loglari_guncelle() 
 
     def sekme_kaynak_gorev_olustur(self):
+        """Görev Yönetimi (Stack) ve Gönüllü Kuyruğu (Queue) sekmesini oluşturur."""
         sekme = QWidget()
         duzen = QHBoxLayout(sekme)
 
         sol_panel = QVBoxLayout()
         sol_panel.addWidget(QLabel("📋 Görev Yönetimi (Stack)"))
+        # Görev tablosu (Hash Table verilerini gösterir).
         self.gorev_tablosu = QTableWidget(0, 6)
         self.gorev_tablosu.setHorizontalHeaderLabels(["ID", "Açıklama", "Durum", "Uzmanlık", "Kişi", "Atananlar"])
         sol_panel.addWidget(self.gorev_tablosu)
@@ -725,7 +800,8 @@ class AnaPencere(QMainWindow):
 
         sag_panel = QVBoxLayout()
         sag_panel.addWidget(QLabel("👥 Gönüllü Kuyruğu (Queue)"))
-        
+
+        # Gönüllülerin FIFO (İlk Gelen İlk Çıkar) sırasıyla beklediği tablo.
         self.gonullu_tablosu = QTableWidget(0, 3)
         self.gonullu_tablosu.setHorizontalHeaderLabels(["ID/TC", "Ad Soyad", "Uzmanlık"])
         self.gonullu_tablosu.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -754,20 +830,25 @@ class AnaPencere(QMainWindow):
         self.sekmeler.addTab(sekme, "Görev/Gönüllü")
         self.gonullu_listesini_tazele()
         self.gorevleri_guncelle()
+
     def gorevleri_guncelle(self):
+        """Hash Table (Sözlük) yapısındaki görevleri tabloya aktarır ve durumlarını görselleştirir."""
+        # Yönetici sınıfındaki görev sözlüğünden değerleri listeye çevirir.
         gorevler = list(self.yonetici.gorev_yonetimi.values())
         self.gorev_tablosu.setRowCount(len(gorevler))
         for i, g in enumerate(gorevler):
+            # Her bir görev verisi için tablo hücresi (widget item) oluşturulur.
             item_id = QTableWidgetItem(g.gorev_id)
             item_ac = QTableWidgetItem(g.aciklama)
             item_durum = QTableWidgetItem(g.durum)
             item_uz = QTableWidgetItem(g.gereken_uzmanlik)
             item_kisi = QTableWidgetItem(str(g.kisi_sayisi))
             item_atanan = QTableWidgetItem(g.atanan_kisiler)
-            
+
+            # Eğer görevin durumu 'Tamamlandı' ise satırı görsel olarak işaretler.
             if g.durum == "Tamamlandı":
                 from PyQt5.QtGui import QColor
-                renk = QColor("#dcfce7") # Açık yeşil
+                renk = QColor("#dcfce7") # Başarılı durum için açık yeşil arka plan.
                 item_id.setBackground(renk)
                 item_ac.setBackground(renk)
                 item_durum.setBackground(renk)
@@ -775,6 +856,7 @@ class AnaPencere(QMainWindow):
                 item_kisi.setBackground(renk)
                 item_atanan.setBackground(renk)
 
+            # Oluşturulan hücreler ilgili satır ve sütuna yerleştirilir.
             self.gorev_tablosu.setItem(i, 0, item_id)
             self.gorev_tablosu.setItem(i, 1, item_ac)
             self.gorev_tablosu.setItem(i, 2, item_durum)
@@ -783,51 +865,69 @@ class AnaPencere(QMainWindow):
             self.gorev_tablosu.setItem(i, 5, item_atanan)
 
     def gorevi_tamamla(self):
+        """Seçili görevi sonlandırır ve Queue (Kuyruk) yapısından gönüllü ataması yapar."""
+        # Tabloda o an seçili olan satırı belirler.
         satir = self.gorev_tablosu.currentRow()
         if satir >= 0:
+            # İlk sütundan görev ID'sini alır.
             g_id = self.gorev_tablosu.item(satir, 0).text()
+            # Yönetici üzerinden görevi tamamlar (Gönüllü kuyruğundan çekme işlemi burada gerçekleşir).
             basarili, mesaj = self.yonetici.gorev_tamamla(g_id)
             if basarili:
                 QMessageBox.information(self, "Başarılı", mesaj)
             else:
                 QMessageBox.warning(self, "Uyarı", mesaj)
+            # Atama sonrası tabloları ve log listesini günceller.
             self.gorevleri_guncelle()
             self.gonullu_listesini_tazele()
             self.loglari_guncelle()
 
     def gorev_geri_al(self):
+        """Stack (Yığın) yapısını kullanarak son tamamlanan görevi 'Bekliyor' durumuna geri çeker."""
         self.yonetici.gorev_geri_al()
+        # Arayüzdeki listeleri eski haline döndürür.
         self.gorevleri_guncelle()
         self.loglari_guncelle()
 
     def kuyruga_ekle(self):
+        """Yeni bir gönüllüyü uzmanlık alanına göre ilgili Queue (Kuyruk) yapısına ekler."""
+        # Giriş alanlarından verileri toplar.
         kid, ad, kat = self.gon_id.text(), self.gon_ad.text(), self.gon_kat.currentText()
         if kid and ad:
+            # Gönüllü nesnesi oluşturulur ve FIFO mantığına göre kuyruğa dahil edilir.
             yeni_g = Gonullu(kid, ad, kat)
             self.yonetici.gonullu_siraya_al(yeni_g)
+            # Giriş alanlarını temizler.
             self.gon_id.clear(); self.gon_ad.clear()
+            # Tabloyu ve müdahale geçmişini tazeler.
             self.gonullu_listesini_tazele()
             self.loglari_guncelle()
 
     def gonullu_listesini_tazele(self):
+        """Tüm uzmanlık kuyruklarındaki aktif gönüllüleri birleştirerek tabloda listeler."""
         tum_gonulluler = []
+        # Her bir kategorinin kuyruk yapısı gezilerek liste birleştirilir.
         for kuyruk in self.yonetici.gonullu_kuyruklari.values():
             tum_gonulluler.extend(kuyruk.kuyruk)
             
         self.gonullu_tablosu.setRowCount(len(tum_gonulluler))
         for i, g in enumerate(tum_gonulluler):
+            # Gönüllü bilgileri tablo hücrelerine yerleştirilir.
             self.gonullu_tablosu.setItem(i, 0, QTableWidgetItem(g.kimlik))
             self.gonullu_tablosu.setItem(i, 1, QTableWidgetItem(g.ad_soyad))
             self.gonullu_tablosu.setItem(i, 2, QTableWidgetItem(g.kategori))
 
     def sekme_raporlama_olustur(self):
+        """Performans analiz grafiklerinin (Matplotlib) yer aldığı rapor sekmesini oluşturur."""
         sekme = QWidget()
         duzen = QVBoxLayout(sekme)
-        
+
+        # Analizi tetikleyen buton.
         btn_test = QPushButton("CRUD Performans Testini Başlat")
         btn_test.clicked.connect(self.dinamik_performans_ciz)
         duzen.addWidget(btn_test)
 
+        # Grafiklerin çizileceği kanvas (FigureCanvas) alanı.
         self.perf_fig = Figure(figsize=(10, 4), dpi=100)
         self.perf_fig.patch.set_facecolor('#EBF2FA')
         self.perf_canvas = FigureCanvas(self.perf_fig)
@@ -836,7 +936,11 @@ class AnaPencere(QMainWindow):
         self.sekmeler.addTab(sekme, "Akademik Rapor (CRUD)")
 
     def dinamik_performans_ciz(self):
+        """Farklı veri yapıları arasındaki hız farkını ölçen testi başlatır ve görselleştirir."""
         QMessageBox.information(self, "Bilgi", "CRUD Testi Başlıyor, bekleyin...")
+        # Uzun süren işlem sırasında arayüzün kilitlenmemesini sağlar.
         QApplication.processEvents()
+        # Matematiksel analizi yapar ve grafiği Figür nesnesi üzerine çizer.
         PerformansAnalizi.crud_testi_ciz(self.perf_fig)
+        # Kanvası yenileyerek yeni grafikleri ekrana yansıtır.
         self.perf_canvas.draw()
