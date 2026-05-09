@@ -355,7 +355,7 @@ class AnaPencere(QMainWindow):
 
         self.kat_cb.blockSignals(True)
         self.kat_cb.clear()
-        self.kat_cb.addItems(list(self.yonetici.tedarikci_verileri.keys()))
+        self.kat_cb.addItems(self.kategoriler)
         self.kat_cb.clearEditText()
         self.kat_cb.setCurrentIndex(-1)
         self.kat_cb.blockSignals(False)

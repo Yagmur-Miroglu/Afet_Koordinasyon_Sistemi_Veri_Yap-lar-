@@ -62,7 +62,7 @@ class SistemYoneticisi:
         "Arama Kurtarma Ekipmanı": ["Hilti Türkiye", "Aksa Jeneratör"],
         "Barınma": ["Ankara Çadır Sarayı", "Nurşah Prefabrik"],
         "Gıda ve Su": ["Türk Kızılay Lojistik", "Ülker (Yıldız Holding)"],
-        "Sağlık ve İlk Yardım": ["Kansuk İlaç", "Bıçakcılar Tıbbi Cihaz"],
+        "Sağlık ve İlk Yardım": ["Türk İlaç", "Bıçakcılar Tıbbi Cihaz"],
         "Hijyen": ["Eczacıbaşı Profesyonel", "Hayat Kimya"],
         "Lojistik ve Enerji": ["Aksa Enerji", "Aras Kargo (Lojistik)"],
         "Personel/Gönüllü": ["AFAD Akademi", "UMKE"],
@@ -147,8 +147,8 @@ class SistemYoneticisi:
         # Kuyruk yapısına (FIFO) örnek gönüllü verileri eklenir (20 adet).
         import random
         from modeller import Gonullu
-        isimler = ["Ahmet Yılmaz", "Ayşe Demir", "Mehmet Kaya", "Fatma Çelik", "Ali Şahin", "Zeynep Öztürk", "Mustafa Arslan", "Elif Yıldız", "Hasan Doğan", "Aylin Koç",
-                   "Kemal Aydın", "Selin Polat", "Burak Can", "Cansu Öz", "Oğuzhan Tekin", "Büşra Çetin", "Caner Gök", "Deniz Kurt", "Emre Karaca", "Ebru Aslan"]
+        isimler = ["Ahmet Yılmaz", "Ayşe Demir", "Mehmet Kaya", "Fatma Çelik", "Ali Şahin", "Zeynep Öztürk", "Mustafa Arslan", "Elif Yıldız", "Hasan Gökgöz", "Senanur Uluman",
+                   "Kemal Aydın", "Selin Polat", "Beyzanur Topcu", "Cansu Öz", "Oğuzhan Tekin", "Büşra Çetin", "Caner Gök", "Deniz Kurt", "Emre Karaca", "Ebru Aslan"]
         uzmanliklar = ["Arama-Kurtarma", "Sağlık/Tıp", "Lojistik", "Psikososyal Destek", "Mutfak/Gıda"]
         
         for i, isim in enumerate(isimler):
